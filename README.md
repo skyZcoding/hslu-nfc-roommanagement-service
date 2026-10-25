@@ -1,0 +1,1 @@
+# hslu-nfc-roommanagement-service
