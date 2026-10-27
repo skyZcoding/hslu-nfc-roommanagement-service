@@ -31,6 +31,15 @@ public class RoomTests
     }
 
     [Fact]
+    public void NormalizeName_TrimsValidNames_AndRejectsInvalidOnes()
+    {
+        Assert.Equal("H2.301", Room.NormalizeName("  H2.301 "));
+        Assert.Throws<DomainException>(() => Room.NormalizeName("  "));
+        Assert.Throws<DomainException>(() => Room.NormalizeName(null));
+        Assert.Throws<DomainException>(() => Room.NormalizeName(new string('x', Room.MaxNameLength + 1)));
+    }
+
+    [Fact]
     public void Create_NegativeFloor_IsAllowed()
     {
         Assert.Equal(-1, Room.Create("Archive", "Main", -1, 5).Floor);

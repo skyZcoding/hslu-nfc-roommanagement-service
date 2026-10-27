@@ -26,12 +26,12 @@ public class Room
     }
 
     public static Room Create(string name, string building, int floor, int capacity) =>
-        new(Guid.NewGuid(), Normalize(name, "Name", MaxNameLength), Normalize(building, "Building", MaxBuildingLength),
+        new(Guid.NewGuid(), NormalizeName(name), Normalize(building, "Building", MaxBuildingLength),
             floor, ValidateCapacity(capacity));
 
     public void Update(string name, string building, int floor, int capacity)
     {
-        var newName = Normalize(name, "Name", MaxNameLength);
+        var newName = NormalizeName(name);
         var newBuilding = Normalize(building, "Building", MaxBuildingLength);
         var newCapacity = ValidateCapacity(capacity);
 
@@ -48,6 +48,9 @@ public class Room
     public void Deactivate() => IsActive = false;
 
     public void Activate() => IsActive = true;
+
+    /// <summary>Trims the name; throws if it is empty or too long.</summary>
+    public static string NormalizeName(string? name) => Normalize(name, "Name", MaxNameLength);
 
     private static string Normalize(string? value, string field, int maxLength)
     {

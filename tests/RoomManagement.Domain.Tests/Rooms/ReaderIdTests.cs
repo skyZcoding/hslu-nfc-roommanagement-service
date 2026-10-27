@@ -34,6 +34,27 @@ public class ReaderIdTests
     }
 
     [Fact]
+    public void TryCreate_Valid_ReturnsNormalizedIdWithoutError()
+    {
+        Assert.True(ReaderId.TryCreate(" Reader-1 ", out var id, out var error));
+
+        Assert.Equal("reader-1", id.Value);
+        Assert.Null(error);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("  ")]
+    [InlineData("has space")]
+    public void TryCreate_Invalid_ReturnsFalseWithErrorMessage(string? value)
+    {
+        Assert.False(ReaderId.TryCreate(value, out var id, out var error));
+
+        Assert.Null(id);
+        Assert.False(string.IsNullOrWhiteSpace(error));
+    }
+
+    [Fact]
     public void Create_AtMaxLength_Succeeds_AndAboveThrows()
     {
         Assert.Equal(ReaderId.MaxLength, ReaderId.Create(new string('a', ReaderId.MaxLength)).Value.Length);

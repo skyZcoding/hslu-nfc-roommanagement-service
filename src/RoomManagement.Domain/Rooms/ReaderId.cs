@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using RoomManagement.Domain.Common;
 
@@ -12,18 +13,30 @@ public sealed partial record ReaderId
 
     private ReaderId(string value) => Value = value;
 
-    public static ReaderId Create(string? value)
+    public static ReaderId Create(string? value) =>
+        TryCreate(value, out var readerId, out var error) ? readerId : throw new DomainException(error);
+
+    /// <summary>Like <see cref="Create"/>, but reports an invalid value through <paramref name="error"/> instead of throwing.</summary>
+    public static bool TryCreate(
+        string? value, [NotNullWhen(true)] out ReaderId? readerId, [NotNullWhen(false)] out string? error)
     {
         var normalized = value?.Trim().ToLowerInvariant();
 
         if (string.IsNullOrEmpty(normalized))
-            throw new DomainException("Reader id must not be empty.");
-        if (normalized.Length > MaxLength)
-            throw new DomainException($"Reader id must not be longer than {MaxLength} characters.");
-        if (!AllowedCharacters().IsMatch(normalized))
-            throw new DomainException("Reader id may only contain letters, digits, '-' and '_'.");
+            error = "Reader id must not be empty.";
+        else if (normalized.Length > MaxLength)
+            error = $"Reader id must not be longer than {MaxLength} characters.";
+        else if (!AllowedCharacters().IsMatch(normalized))
+            error = "Reader id may only contain letters, digits, '-' and '_'.";
+        else
+        {
+            readerId = new ReaderId(normalized);
+            error = null;
+            return true;
+        }
 
-        return new ReaderId(normalized);
+        readerId = null;
+        return false;
     }
 
     public override string ToString() => Value;
