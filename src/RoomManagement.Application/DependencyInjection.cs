@@ -1,6 +1,8 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using RoomManagement.Application.Bookings;
 using RoomManagement.Application.Rooms;
+using RoomManagement.Application.Scans;
 using RoomManagement.Application.Users;
 
 namespace RoomManagement.Application;
@@ -25,6 +27,16 @@ public static class DependencyInjection
         services.AddScoped<DeactivateRoomHandler>();
         services.AddScoped<AssignReaderHandler>();
         services.AddScoped<RemoveReaderHandler>();
+
+        services.AddScoped<CreateBookingHandler>();
+        services.AddScoped<GetBookingHandler>();
+        services.AddScoped<CancelBookingHandler>();
+        services.AddScoped<CheckInBookingHandler>();
+        services.AddScoped<ListRoomBookingsHandler>();
+        services.AddScoped<ListUserBookingsHandler>();
+        services.AddScoped<GetRoomAvailabilityHandler>();
+
+        services.AddScoped<ProcessCardScanHandler>();
 
         return services;
     }
