@@ -31,6 +31,9 @@ app.MapHealthEndpoints();
 
 var api = app.MapGroup("/api/v1");
 api.MapUserEndpoints();
+api.MapRoomEndpoints();
+api.MapBookingEndpoints();
+api.MapReaderEndpoints();
 
 app.Run();
 

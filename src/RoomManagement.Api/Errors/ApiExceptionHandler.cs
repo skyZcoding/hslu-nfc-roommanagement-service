@@ -58,9 +58,10 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetailsS
         Extensions = { ["code"] = code },
     };
 
-    // The JSON error says which property is missing or invalid, which is what a client needs to fix the request.
+    // These messages say which property or parameter is missing or invalid (for example a query value that is
+    // not a date), which is what a client needs to fix the request. They never contain server internals.
     private static string DescribeBadRequest(BadHttpRequestException exception) =>
         exception.InnerException is JsonException json
             ? $"The request body is not valid: {json.Message}"
-            : "The request could not be understood.";
+            : exception.Message;
 }

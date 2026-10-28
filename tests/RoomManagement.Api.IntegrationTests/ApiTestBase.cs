@@ -4,6 +4,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using RoomManagement.Application.Bookings;
+using RoomManagement.Application.Rooms;
+using RoomManagement.Application.Users;
 
 namespace RoomManagement.Api.IntegrationTests;
 
@@ -34,6 +37,44 @@ public abstract class ApiTestBase(PostgresFixture postgres) : IAsyncLifetime
         Client.Dispose();
         await Factory.DisposeAsync();
     }
+
+    // ---- arranging data through the API; each helper checks that the call it relies on succeeded ----
+
+    protected async Task<UserDto> CreateUserAsync(string email = "jan@example.com", string displayName = "Jan", string role = "Member")
+    {
+        var response = await Client.PostAsJsonAsync($"{ApiRoot}/users", new { email, displayName, role }, Json);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        return await ReadAsync<UserDto>(response);
+    }
+
+    protected async Task<RoomDto> CreateRoomAsync(
+        string name = "H2.301", string building = "Campus Rotkreuz", int floor = 3, int capacity = 24)
+    {
+        var response = await Client.PostAsJsonAsync($"{ApiRoot}/rooms", new { name, building, floor, capacity }, Json);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        return await ReadAsync<RoomDto>(response);
+    }
+
+    protected async Task AssignReaderAsync(Guid roomId, string readerId)
+    {
+        var response = await Client.PutAsJsonAsync($"{ApiRoot}/rooms/{roomId}/reader", new { readerId }, Json);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    protected async Task<BookingDto> CreateBookingAsync(Guid roomId, Guid userId, DateTimeOffset start, DateTimeOffset end)
+    {
+        var response = await Client.PostAsJsonAsync($"{ApiRoot}/rooms/{roomId}/bookings", new { userId, start, end }, Json);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        return await ReadAsync<BookingDto>(response);
+    }
+
+    protected async Task DeactivateAsync(string collection, Guid id)
+    {
+        var response = await Client.DeleteAsync($"{ApiRoot}/{collection}/{id}");
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    protected static string Iso(DateTimeOffset value) => Uri.EscapeDataString(value.ToString("O"));
 
     protected static async Task<T> ReadAsync<T>(HttpResponseMessage response)
     {

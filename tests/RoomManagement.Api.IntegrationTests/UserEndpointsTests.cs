@@ -13,13 +13,6 @@ public class UserEndpointsTests(PostgresFixture postgres) : ApiTestBase(postgres
 
     private Task<HttpResponseMessage> PostUserAsync(object body) => Client.PostAsJsonAsync(UsersUrl, body, Json);
 
-    private async Task<UserDto> CreateUserAsync(string email = "jan@example.com", string displayName = "Jan", string role = "Member")
-    {
-        var response = await PostUserAsync(new { email, displayName, role });
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        return await ReadAsync<UserDto>(response);
-    }
-
     // ---- create ----
 
     [Fact]

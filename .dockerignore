@@ -1,0 +1,15 @@
+# Keeps the build context small and free of secrets (the Dockerfile only needs src/).
+.git
+.gitignore
+.dockerignore
+.env
+.env.*
+docker-compose*.yml
+**/bin
+**/obj
+**/.vs
+**/.vscode
+**/.idea
+tests
+docs
+*.md

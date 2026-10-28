@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 
 namespace RoomManagement.Api.IntegrationTests;
 
@@ -54,6 +55,31 @@ public class OperationsTests(PostgresFixture postgres) : ApiTestBase(postgres)
         Assert.Contains("/api/v1/users/{id}", json);
         Assert.Equal(HttpStatusCode.OK, ui.StatusCode);
         Assert.Equal("text/html", ui.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task TheOpenApiDocument_ListsEveryEndpointOfTheConcept()
+    {
+        (string Method, string Path)[] expected =
+        [
+            ("get", "/users"), ("post", "/users"), ("get", "/users/{id}"), ("put", "/users/{id}"), ("delete", "/users/{id}"),
+            ("get", "/users/{userId}/bookings"),
+            ("get", "/rooms"), ("post", "/rooms"), ("get", "/rooms/{id}"), ("put", "/rooms/{id}"), ("delete", "/rooms/{id}"),
+            ("get", "/rooms/by-reader/{readerId}"), ("put", "/rooms/{id}/reader"), ("delete", "/rooms/{id}/reader"),
+            ("get", "/rooms/{roomId}/bookings"), ("post", "/rooms/{roomId}/bookings"), ("get", "/rooms/{roomId}/availability"),
+            ("get", "/bookings/{id}"), ("post", "/bookings/{id}/cancel"), ("post", "/bookings/{id}/check-in"),
+            ("post", "/readers/{readerId}/scans"),
+        ];
+
+        using var document = JsonDocument.Parse(await Client.GetStringAsync("/openapi/v1.json"));
+        var paths = document.RootElement.GetProperty("paths");
+
+        var missing = expected
+            .Where(e => !(paths.TryGetProperty($"{ApiRoot}{e.Path}", out var item) && item.TryGetProperty(e.Method, out _)))
+            .Select(e => $"{e.Method.ToUpperInvariant()} {ApiRoot}{e.Path}")
+            .ToList();
+
+        Assert.Empty(missing);
     }
 
     [Fact]

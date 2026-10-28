@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using RoomManagement.Application.Bookings;
 using RoomManagement.Application.Common;
@@ -47,8 +48,16 @@ public static class DependencyInjection
     public static async Task MigrateDatabaseAsync(this IServiceProvider services, CancellationToken cancellationToken = default)
     {
         await using var scope = services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var options = scope.ServiceProvider.GetRequiredService<DbContextOptions<AppDbContext>>();
 
+        // On a new database EF Core first reads the migrations history table, which does not exist yet, and then
+        // creates it. That expected failure would show up as an error in the log of every first start, so it is
+        // not logged. Errors of real queries are unaffected: they are thrown and logged by the caller.
+        var migrationOptions = new DbContextOptionsBuilder<AppDbContext>(options)
+            .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.CommandError))
+            .Options;
+
+        await using var db = new AppDbContext(migrationOptions);
         await db.Database.MigrateAsync(cancellationToken);
     }
 }

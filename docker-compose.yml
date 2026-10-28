@@ -1,0 +1,59 @@
+# Room management service: the REST API and its PostgreSQL database.
+#
+#   cp .env.example .env
+#   docker compose up --build
+#
+# The API is then available at http://localhost:8080 (see API_BIND and API_PORT in .env).
+
+name: roommanagement
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env (see .env.example)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (see .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env (see .env.example)}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Checked over TCP: while the image initializes a new volume it runs a temporary server that only
+      # listens on a socket, and the API must not start before the real one is up.
+      test: ["CMD-SHELL", "pg_isready --host=127.0.0.1 --username=$${POSTGRES_USER} --dbname=$${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    # There is deliberately no "ports" entry: only the API container can reach the database.
+
+  api:
+    build:
+      context: .
+      dockerfile: src/RoomManagement.Api/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      # "GSS Encryption Mode=Disable": the runtime image has no Kerberos library, and without this setting the
+      # database driver complains about the missing libgssapi_krb5 on every start.
+      ConnectionStrings__Default: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};GSS Encryption Mode=Disable
+      # Creates and updates the database schema when the API starts.
+      Database__MigrateOnStartup: "true"
+    ports:
+      - "${API_BIND:-127.0.0.1}:${API_PORT:-8080}:8080"
+    healthcheck:
+      # The runtime image has no curl, so ask /health/ready with a plain HTTP request over bash's /dev/tcp.
+      test:
+        - CMD-SHELL
+        - >-
+          bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf "GET /health/ready HTTP/1.0\r\n\r\n" >&3 &&
+          head -n 1 <&3 | grep -q " 200 "'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  pgdata:
