@@ -24,6 +24,7 @@ public abstract class DatabaseTestBase(PostgresFixture postgres) : IAsyncLifetim
     public async Task InitializeAsync()
     {
         var services = new ServiceCollection();
+        services.AddLogging(); // the generic host provides this in the real application
         services.AddApplication();
         services.AddInfrastructure(await postgres.CreateDatabaseAsync());
 

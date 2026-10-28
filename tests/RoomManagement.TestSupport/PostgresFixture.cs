@@ -2,11 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using RoomManagement.Infrastructure;
 using Testcontainers.PostgreSql;
+using Xunit;
 
-namespace RoomManagement.Infrastructure.Tests;
+namespace RoomManagement.TestSupport;
 
 /// <summary>
-/// One PostgreSQL container for the whole test run. The migrations are applied once to a template database;
+/// One PostgreSQL container for a whole test run. The migrations are applied once to a template database;
 /// every test then gets its own copy of it, which is far cheaper than migrating again.
 /// </summary>
 public sealed class PostgresFixture : IAsyncLifetime
@@ -31,10 +32,20 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// <summary>Creates a new, fully migrated database and returns its connection string.</summary>
     public async Task<string> CreateDatabaseAsync()
     {
-        var name = $"test_{Guid.NewGuid():N}";
+        var name = NewDatabaseName();
         await ExecuteAsync($"CREATE DATABASE \"{name}\" TEMPLATE \"{TemplateName}\"");
         return ConnectionStringFor(name);
     }
+
+    /// <summary>Creates a new database without any tables and returns its connection string.</summary>
+    public async Task<string> CreateEmptyDatabaseAsync()
+    {
+        var name = NewDatabaseName();
+        await ExecuteAsync($"CREATE DATABASE \"{name}\"");
+        return ConnectionStringFor(name);
+    }
+
+    private static string NewDatabaseName() => $"test_{Guid.NewGuid():N}";
 
     private string ConnectionStringFor(string database) =>
         new NpgsqlConnectionStringBuilder(_container.GetConnectionString())
@@ -50,10 +61,4 @@ public sealed class PostgresFixture : IAsyncLifetime
         await using var command = new NpgsqlCommand(sql, connection);
         await command.ExecuteNonQueryAsync();
     }
-}
-
-[CollectionDefinition(Name)]
-public sealed class PostgresCollection : ICollectionFixture<PostgresFixture>
-{
-    public const string Name = "postgres";
 }

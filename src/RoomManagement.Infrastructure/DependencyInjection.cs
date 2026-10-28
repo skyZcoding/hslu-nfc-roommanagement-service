@@ -15,7 +15,20 @@ public static class DependencyInjection
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
-        services.AddDbContext<AppDbContext>(options => options.UseAppDatabase(connectionString));
+        return services.AddInfrastructure(_ => connectionString);
+    }
+
+    /// <param name="connectionString">
+    /// Called when the database is first used rather than while services are registered, so it sees the final
+    /// configuration (for example the overrides a test host applies).
+    /// </param>
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services, Func<IServiceProvider, string> connectionString)
+    {
+        ArgumentNullException.ThrowIfNull(connectionString);
+
+        services.AddDbContext<AppDbContext>((serviceProvider, options) =>
+            options.UseAppDatabase(connectionString(serviceProvider)));
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoomRepository, RoomRepository>();
@@ -23,6 +36,9 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.AddSingleton<IClock, SystemClock>();
+
+        // The API reports the app as ready only while the database is reachable.
+        services.AddHealthChecks().AddDbContextCheck<AppDbContext>("database", tags: ["ready"]);
 
         return services;
     }
